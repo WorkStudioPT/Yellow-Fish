@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yellow Fish Pro</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<!-- ══════════════════ ECRÃ DE LOGIN ══════════════════ -->
+<div id="login-screen" class="login-screen">
+    <div class="login-box">
+        <div class="login-logo">🐟</div>
+        <h1 class="login-title">Yellow Fish <span>Pro</span></h1>
+        <p class="login-sub">Gestão de Pescado</p>
+
+        <div id="login-error" class="login-error" style="display:none;"></div>
+
+        <div class="login-field">
+            <label>Email</label>
+            <input type="email" id="auth-email" placeholder="email@exemplo.com" autocomplete="username">
+        </div>
+        <div class="login-field">
+            <label>Palavra-passe</label>
+            <input type="password" id="auth-pass" placeholder="••••••••" autocomplete="current-password">
+        </div>
+
+        <button class="login-btn" onclick="doLogin()">Entrar</button>
+
+        <div class="login-divider"><span>ou</span></div>
+
+        <button class="register-btn" onclick="doRegister()">Criar conta nova</button>
+
+        <p class="login-hint">Esqueceste a palavra-passe? <a href="#" onclick="doReset()">Recuperar</a></p>
+    </div>
+</div>
+
+<!-- ══════════════════ APP PRINCIPAL ══════════════════ -->
+<div id="app-screen" style="display:none;">
+
+<div class="container">
+    <div id="edit-indicator" class="edit-warning" style="display: none;">
+        ⚠️ MODO DE EDIÇÃO ATIVO: <span id="edit-id-label"></span>
+        <button onclick="cancelEdit()" class="cancel-btn">Cancelar / Sair</button>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab('cliente-tab', this)">COMPRA A CLIENTE</button>
+        <button class="tab-btn" onclick="openTab('patrao-tab', this)">VENDA AO PATRÃO</button>
+        <button class="tab-btn" onclick="openTab('db-tab', this)">HISTÓRICO COMPLETO</button>
+        <button class="tab-btn logout-tab" onclick="doLogout()" title="Sair">⏻ Sair</button>
+    </div>
+
+    <div id="cliente-tab" class="tab-content active">
+        <h2>Registar Compra a Cliente</h2>
+        <div class="name-field">
+            <label>NOME DO CLIENTE:</label>
+            <input type="text" id="cliente-nome" placeholder="Ex: Manuel Silva...">
+        </div>
+        <div id="compra-items"></div>
+        <button class="add-btn" onclick="addItem('compra-items', 'cliente_compra')">+ Peixe</button>
+
+        <div class="extra-section">
+            <label>Extras/Deduções:</label>
+            <div id="venda-items"></div>
+            <button class="add-btn" onclick="addItem('venda-items', 'cliente_venda')">+ Extra</button>
+        </div>
+
+        <div class="total-display">
+            <span class="money-val" id="total-cliente">0$</span>
+            <div class="stats-val" id="stats-cliente">Peixes: 0 | Caixas: 0 | Outros: 0</div>
+        </div>
+        <button class="save-btn" onclick="saveTransaction('Cliente')">Finalizar e Guardar</button>
+
+        <div class="mini-history">
+            <h3>Últimas Compras a Clientes:</h3>
+            <table class="unified-table">
+                <thead>
+                    <tr>
+                        <th style="width:15%;">Data</th>
+                        <th style="width:15%;">Nome</th>
+                        <th style="width:10%;">Tipo</th>
+                        <th style="width:40%;">Detalhes</th>
+                        <th style="width:10%;">Total</th>
+                        <th style="width:10%;">Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="mini-table-cliente-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="patrao-tab" class="tab-content">
+        <h2>Venda ao Patrão</h2>
+        <div class="name-field">
+            <label>OBSERVAÇÕES:</label>
+            <input type="text" id="patrao-obs" placeholder="Ex: Venda Manhã...">
+        </div>
+        <div id="patrao-items"></div>
+        <button class="add-btn" onclick="addItem('patrao-items', 'patrao')">+ Adicionar Item</button>
+
+        <div class="total-display">
+            <span class="money-val" id="total-patrao">0$</span>
+            <div class="stats-val" id="stats-patrao">Peixes: 0 | Caixas: 0 | Outros: 0</div>
+        </div>
+        <button class="save-btn" onclick="saveTransaction('Patrão')">Finalizar e Guardar</button>
+
+        <div class="mini-history">
+            <h3>Últimas Vendas ao Patrão:</h3>
+            <table class="unified-table">
+                <thead>
+                    <tr>
+                        <th style="width:15%;">Data</th>
+                        <th style="width:15%;">Ref</th>
+                        <th style="width:10%;">Tipo</th>
+                        <th style="width:40%;">Detalhes</th>
+                        <th style="width:10%;">Total</th>
+                        <th style="width:10%;">Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="mini-table-patrao-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="db-tab" class="tab-content">
+        <h2>Gestão de Dados</h2>
+        <div class="db-actions">
+            <button class="load-btn" onclick="exportCSV()">Exportar CSV</button>
+            <label class="load-btn purple-btn">
+                Importar CSV <input type="file" accept=".csv" style="display:none" onchange="importCSV(event)">
+            </label>
+            <button class="load-btn red-btn" onclick="clearHistory()">Apagar Tudo</button>
+        </div>
+        <div id="db-loading" class="db-loading" style="display:none;">A carregar dados…</div>
+        <table class="unified-table">
+            <thead>
+                <tr>
+                    <th style="width:15%;">Data</th>
+                    <th style="width:15%;">Entidade</th>
+                    <th style="width:10%;">Tipo</th>
+                    <th style="width:40%;">Detalhes</th>
+                    <th style="width:10%;">Total</th>
+                    <th style="width:10%;">Ação</th>
+                </tr>
+            </thead>
+            <tbody id="db-body-full"></tbody>
+        </table>
+    </div>
+</div>
+
+</div><!-- /app-screen -->
+
+<script src="script.js"></script>
+</body>
+</html>
