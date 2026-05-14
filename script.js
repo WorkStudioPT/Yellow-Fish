@@ -6,14 +6,7 @@ const SUPABASE_URL = "https://ymvbiprvqulecawiuscj.supabase.co";
 const SUPABASE_KEY = "sb_publishable_tU1FQVAf25yXDS2jZ8tA2Q_vSmEqbvW";
 
 const { createClient } = supabase;
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: {
-    storage: window.localStorage, // Força explicitamente o uso do localStorage
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  }
-});
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── Estado global ─────────────────────────────────────────
 let historico = [];
