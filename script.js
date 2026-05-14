@@ -6,7 +6,14 @@ const SUPABASE_URL = "https://ymvbiprvqulecawiuscj.supabase.co";
 const SUPABASE_KEY = "sb_publishable_tU1FQVAf25yXDS2jZ8tA2Q_vSmEqbvW";
 
 const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    storage: window.localStorage, // Força explicitamente o uso do localStorage
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  }
+});
 
 // ── Estado global ─────────────────────────────────────────
 let historico = [];
@@ -59,10 +66,18 @@ function setLoginError(msg, type = "error") {
 
 // Listener de sessão — controla qual ecrã mostrar
 db.auth.onAuthStateChange(async (event, session) => {
-  console.log("Evento de Auth:", event); // Adiciona isto para ver se é 'SIGNED_IN' ou 'INITIAL_SESSION'
-  
+  // Só reage a eventos relevantes
+  if (!['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED', 'SIGNED_OUT'].includes(event)) return;
+
+  if (event === 'SIGNED_OUT') {
+    currentUser = null;
+    historico = [];
+    document.getElementById("login-screen").style.display = "flex";
+    document.getElementById("app-screen").style.display = "none";
+    return;
+  }
+
   if (session?.user) {
-    console.log("Utilizador detetado:", session.user.email);
     currentUser = session.user;
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("app-screen").style.display = "block";
