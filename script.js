@@ -64,9 +64,8 @@ async function mostrarEcra(session) {
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("app-screen").style.display = "block";
     
-    // O AWAIT é obrigatório aqui para não saltar para o próximo passo sem dados
-    await loadFromSupabase(); 
-    renderAllTables(); 
+    await loadFromSupabase(); // 1. Vai buscar os dados à BD
+    renderAllTables();        // 2. Só agora desenha no ecrã
   } else {
     currentUser = null;
     historico = [];
@@ -75,16 +74,23 @@ async function mostrarEcra(session) {
   }
 }
 
-function initAuth() {
-  // SDK v3: onAuthStateChange dispara INITIAL_SESSION ao carregar (inclui F5)
-  // Não precisamos de getSession() separado
-  const { data: { subscription } } = db.auth.onAuthStateChange(async (event, session) => {
+async function initAuth() {
+  // 1. Verifica se já existe uma sessão guardada nos cookies assim que a página abre
+  const { data: { session } } = await db.auth.getSession();
+  if (session) {
+    console.log("Sessão recuperada no refresh:", session.user.email);
+    await mostrarEcra(session);
+  } else {
+    await mostrarEcra(null);
+  }
+
+  // 2. Mantém o listener para mudanças futuras (login/logout)
+  db.auth.onAuthStateChange(async (event, session) => {
     console.log("[Auth event]", event, session?.user?.email ?? "sem sessão");
-    if (event === "SIGNED_OUT") {
-      await mostrarEcra(null);
-    } else if (session) {
+    
+    if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
       await mostrarEcra(session);
-    } else if (event === "INITIAL_SESSION" && !session) {
+    } else if (event === "SIGNED_OUT") {
       await mostrarEcra(null);
     }
   });
