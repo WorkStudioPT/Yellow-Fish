@@ -59,7 +59,10 @@ function setLoginError(msg, type = "error") {
 
 // Listener de sessão — controla qual ecrã mostrar
 db.auth.onAuthStateChange(async (event, session) => {
+  console.log("Evento de Auth:", event); // Adiciona isto para ver se é 'SIGNED_IN' ou 'INITIAL_SESSION'
+  
   if (session?.user) {
+    console.log("Utilizador detetado:", session.user.email);
     currentUser = session.user;
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("app-screen").style.display = "block";
@@ -78,12 +81,17 @@ db.auth.onAuthStateChange(async (event, session) => {
 // ══════════════════════════════════════════════════════════
 
 async function loadFromSupabase() {
+  if (!currentUser) return; // Segurança extra: não tenta carregar se não houver user
+
   const { data, error } = await db
     .from("transacoes")
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (error) { console.error("Erro ao carregar:", error); return; }
+  if (error) { 
+    console.error("Erro ao carregar:", error); 
+    return; 
+  }
   historico = data || [];
 }
 
