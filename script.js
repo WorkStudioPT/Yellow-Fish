@@ -64,9 +64,9 @@ async function mostrarEcra(session) {
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("app-screen").style.display = "block";
     
-    // IMPORTANTE: Esperar pelos dados ANTES de desenhar a tabela
-    await loadFromSupabase(); 
-    renderAllTables(); 
+    // ⚠️ O SEGREDO ESTÁ AQUI:
+    await loadFromSupabase(); // Espera os dados chegarem da BD
+    renderAllTables();        // Só depois desenha a tabela
   } else {
     currentUser = null;
     historico = [];
@@ -95,7 +95,7 @@ function initAuth() {
 // ══════════════════════════════════════════════════════════
 
 async function loadFromSupabase() {
-  if (!currentUser) return; // Segurança extra: não tenta carregar se não houver user
+  if (!currentUser) return;
 
   const { data, error } = await db
     .from("transacoes")
@@ -106,7 +106,10 @@ async function loadFromSupabase() {
     console.error("Erro ao carregar:", error); 
     return; 
   }
-  historico = data || [];
+  
+  // Atualiza a variável global que o renderAllTables usa
+  historico = data || []; 
+  console.log("Dados carregados com sucesso:", historico.length, "registos.");
 }
 
 async function insertSupabase(pedido) {
