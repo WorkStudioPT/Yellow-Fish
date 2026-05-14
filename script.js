@@ -63,8 +63,10 @@ async function mostrarEcra(session) {
     currentUser = session.user;
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("app-screen").style.display = "block";
-    await loadFromSupabase();
-    renderAllTables();
+    
+    // IMPORTANTE: Esperar pelos dados ANTES de desenhar a tabela
+    await loadFromSupabase(); 
+    renderAllTables(); 
   } else {
     currentUser = null;
     historico = [];
