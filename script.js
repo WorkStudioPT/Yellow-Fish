@@ -57,32 +57,34 @@ function setLoginError(msg, type = "error") {
   el.className = "login-error " + (type === "success" ? "login-success" : "");
 }
 
-// Listener de sessão — controla qual ecrã mostrar
-db.auth.onAuthStateChange(async (event, session) => {
-  // Só reage a eventos relevantes
-  if (!['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED', 'SIGNED_OUT'].includes(event)) return;
+// Listener de sessão — arranca só depois do DOM estar pronto
+function initAuth() {
+  db.auth.onAuthStateChange(async (event, session) => {
+    // Só reage a eventos relevantes
+    if (!['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED', 'SIGNED_OUT'].includes(event)) return;
 
-  if (event === 'SIGNED_OUT') {
-    currentUser = null;
-    historico = [];
-    document.getElementById("login-screen").style.display = "flex";
-    document.getElementById("app-screen").style.display = "none";
-    return;
-  }
+    if (event === 'SIGNED_OUT') {
+      currentUser = null;
+      historico = [];
+      document.getElementById("login-screen").style.display = "flex";
+      document.getElementById("app-screen").style.display = "none";
+      return;
+    }
 
-  if (session?.user) {
-    currentUser = session.user;
-    document.getElementById("login-screen").style.display = "none";
-    document.getElementById("app-screen").style.display = "block";
-    await loadFromSupabase();
-    renderAllTables();
-  } else {
-    currentUser = null;
-    historico = [];
-    document.getElementById("login-screen").style.display = "flex";
-    document.getElementById("app-screen").style.display = "none";
-  }
-});
+    if (session?.user) {
+      currentUser = session.user;
+      document.getElementById("login-screen").style.display = "none";
+      document.getElementById("app-screen").style.display = "block";
+      await loadFromSupabase();
+      renderAllTables();
+    } else {
+      currentUser = null;
+      historico = [];
+      document.getElementById("login-screen").style.display = "flex";
+      document.getElementById("app-screen").style.display = "none";
+    }
+  });
+}
 
 // ══════════════════════════════════════════════════════════
 //  SUPABASE — CRUD
@@ -517,4 +519,5 @@ async function clearHistory() {
 document.addEventListener("DOMContentLoaded", () => {
   addItem("compra-items", "cliente_compra");
   addItem("patrao-items", "patrao");
+  initAuth(); // Inicia auth só depois do DOM estar pronto
 });
