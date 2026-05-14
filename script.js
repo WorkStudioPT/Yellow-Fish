@@ -3,7 +3,7 @@
 // ║  Settings > API > Project URL  e  anon/public key        ║
 // ╚══════════════════════════════════════════════════════════╝
 const SUPABASE_URL = "https://ymvbiprvqulecawiuscj.supabase.co";
-const SUPABASE_KEY = "sb_publishable_tU1FQVAf25yXDS2jZ8tA2Q_vSmEqbvW";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltdmJpcHJ2cXVsZWNhd2l1c2NqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2ODYyMTgsImV4cCI6MjA5NDI2MjIxOH0.e78k2EAP4t-IBiX7c_k4Xhpph9Z_3XEc7XlqZw5y0mE";
 
 const { createClient } = supabase;
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -74,15 +74,14 @@ async function mostrarEcra(session) {
 }
 
 function initAuth() {
-  // 1. Verificar sessão existente imediatamente (resolve o problema do F5)
-  db.auth.getSession().then(({ data }) => {
-    mostrarEcra(data.session);
-  });
-
-  // 2. Listener para mudanças futuras (login, logout, refresh de token)
+  // onAuthStateChange dispara sempre com INITIAL_SESSION ao carregar a página,
+  // mesmo após F5 — não é necessário chamar getSession() separadamente.
   db.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-      await mostrarEcra(event === 'SIGNED_OUT' ? null : session);
+    if (event === 'SIGNED_OUT') {
+      await mostrarEcra(null);
+    } else if (session) {
+      // Cobre: INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED, USER_UPDATED
+      await mostrarEcra(session);
     }
   });
 }
