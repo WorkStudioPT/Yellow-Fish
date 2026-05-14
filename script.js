@@ -57,31 +57,32 @@ function setLoginError(msg, type = "error") {
   el.className = "login-error " + (type === "success" ? "login-success" : "");
 }
 
-// Listener de sessão — arranca só depois do DOM estar pronto
+// Mostra app ou login consoante o estado da sessão
+async function mostrarEcra(session) {
+  if (session?.user) {
+    currentUser = session.user;
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("app-screen").style.display = "block";
+    await loadFromSupabase();
+    renderAllTables();
+  } else {
+    currentUser = null;
+    historico = [];
+    document.getElementById("login-screen").style.display = "flex";
+    document.getElementById("app-screen").style.display = "none";
+  }
+}
+
 function initAuth() {
+  // 1. Verificar sessão existente imediatamente (resolve o problema do F5)
+  db.auth.getSession().then(({ data }) => {
+    mostrarEcra(data.session);
+  });
+
+  // 2. Listener para mudanças futuras (login, logout, refresh de token)
   db.auth.onAuthStateChange(async (event, session) => {
-    // Só reage a eventos relevantes
-    if (!['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED', 'SIGNED_OUT'].includes(event)) return;
-
-    if (event === 'SIGNED_OUT') {
-      currentUser = null;
-      historico = [];
-      document.getElementById("login-screen").style.display = "flex";
-      document.getElementById("app-screen").style.display = "none";
-      return;
-    }
-
-    if (session?.user) {
-      currentUser = session.user;
-      document.getElementById("login-screen").style.display = "none";
-      document.getElementById("app-screen").style.display = "block";
-      await loadFromSupabase();
-      renderAllTables();
-    } else {
-      currentUser = null;
-      historico = [];
-      document.getElementById("login-screen").style.display = "flex";
-      document.getElementById("app-screen").style.display = "none";
+    if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+      await mostrarEcra(event === 'SIGNED_OUT' ? null : session);
     }
   });
 }
