@@ -3,7 +3,7 @@
 // ║  Settings > API > Project URL  e  anon/public key        ║
 // ╚══════════════════════════════════════════════════════════╝
 const SUPABASE_URL = "https://ymvbiprvqulecawiuscj.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltdmJpcHJ2cXVsZWNhd2l1c2NqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2ODYyMTgsImV4cCI6MjA5NDI2MjIxOH0.e78k2EAP4t-IBiX7c_k4Xhpph9Z_3XEc7XlqZw5y0mE";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltdmJpcHJ2cXVsZWNhd2l1c2NqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2ODYyMTgsImV4cCI6MjA5NDI2MjIxOH0.e78k2EAP4t-IBiX7c_k4Xhpph9Z_3XEc7XlqZw5y0mEs";
 
 const { createClient } = supabase;
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -74,13 +74,18 @@ async function mostrarEcra(session) {
 }
 
 function initAuth() {
-  // onAuthStateChange dispara sempre com INITIAL_SESSION ao carregar a página,
-  // mesmo após F5 — não é necessário chamar getSession() separadamente.
+  // Passo 1: lê a sessão do localStorage imediatamente (funciona após F5)
+  db.auth.getSession().then(async ({ data }) => {
+    await mostrarEcra(data.session);
+  });
+
+  // Passo 2: listener só para eventos futuros — ignora INITIAL_SESSION
+  // para não chamar mostrarEcra duas vezes no arranque
   db.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'INITIAL_SESSION') return;
     if (event === 'SIGNED_OUT') {
       await mostrarEcra(null);
-    } else if (session) {
-      // Cobre: INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED, USER_UPDATED
+    } else {
       await mostrarEcra(session);
     }
   });
