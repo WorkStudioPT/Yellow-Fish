@@ -64,9 +64,9 @@ async function mostrarEcra(session) {
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("app-screen").style.display = "block";
     
-    // ⚠️ O SEGREDO ESTÁ AQUI:
-    await loadFromSupabase(); // Espera os dados chegarem da BD
-    renderAllTables();        // Só depois desenha a tabela
+    // O AWAIT é obrigatório aqui para não saltar para o próximo passo sem dados
+    await loadFromSupabase(); 
+    renderAllTables(); 
   } else {
     currentUser = null;
     historico = [];
@@ -95,21 +95,19 @@ function initAuth() {
 // ══════════════════════════════════════════════════════════
 
 async function loadFromSupabase() {
-  if (!currentUser) return;
-
   const { data, error } = await db
     .from("transacoes")
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (error) { 
-    console.error("Erro ao carregar:", error); 
-    return; 
+  if (error) {
+    console.error("Erro:", error);
+    return;
   }
   
-  // Atualiza a variável global que o renderAllTables usa
+  // Isto garante que a variável global é preenchida
   historico = data || []; 
-  console.log("Dados carregados com sucesso:", historico.length, "registos.");
+  console.log("Registos carregados:", historico.length);
 }
 
 async function insertSupabase(pedido) {
