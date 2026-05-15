@@ -504,7 +504,105 @@ button { cursor: pointer; border: none; border-radius: var(--radius); font-famil
 .btn-delete-row { background: rgba(232,56,26,0.08);  color: var(--danger); }
 .btn-delete-row:hover { background: rgba(232,56,26,0.18); border-color: var(--danger); }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
+/* ══════════════════════════════════════════
+   MODE TOGGLE (Compra / Venda)
+══════════════════════════════════════════ */
+.mode-toggle-bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    margin-bottom: 22px;
+}
+
+.mode-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-lt);
+    white-space: nowrap;
+}
+
+.mode-toggle-group {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.mode-btn {
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border: 2px solid var(--border);
+    background: var(--white);
+    color: var(--text-mid);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.mode-btn:hover {
+    border-color: var(--ocean);
+    color: var(--ocean);
+    background: rgba(27,108,168,0.06);
+}
+
+.mode-btn.active {
+    background: var(--navy);
+    border-color: var(--navy);
+    color: var(--white);
+    box-shadow: var(--shadow-sm);
+}
+
+.mode-btn.active:first-child {
+    background: linear-gradient(135deg, var(--ocean) 0%, var(--navy) 100%);
+    border-color: var(--ocean);
+}
+
+.mode-btn.active:last-child {
+    background: linear-gradient(135deg, var(--success) 0%, var(--success-dk) 100%);
+    border-color: var(--success-dk);
+}
+
+
+.craft-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.craft-section {
+    background: var(--white);
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+}
+
+.recipe-card {
+    border-left: 4px solid var(--ocean);
+    background: var(--surface);
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+}
+
+.recipe-card h4 {
+    margin: 0 0 10px 0;
+    color: var(--navy);
+}
+
+.recipe-materials {
+    font-size: 0.9em;
+    color: var(--text-mid);
+}
+
+
 ::-webkit-scrollbar-track { background: var(--surface); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-lt); }
@@ -519,3 +617,5 @@ button { cursor: pointer; border: none; border-radius: var(--radius); font-famil
     .money-val { font-size: 28px; }
     .login-box { padding: 30px 20px; }
 }
+
+

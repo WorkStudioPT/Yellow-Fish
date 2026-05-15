@@ -50,20 +50,33 @@
     <div class="tabs">
         <button class="tab-btn active" onclick="openTab('cliente-tab', this)">COMPRA A CLIENTE</button>
         <button class="tab-btn" onclick="openTab('patrao-tab', this)">VENDA AO PATRÃO</button>
+        <button class="tab-btn" onclick="openTab('craft-tab')">Preços e Craft</button>
         <button class="tab-btn" onclick="openTab('db-tab', this)">HISTÓRICO COMPLETO</button>
         <button class="tab-btn logout-tab" onclick="doLogout()" title="Sair">⏻ Sair</button>
     </div>
 
     <div id="cliente-tab" class="tab-content active">
-        <h2>Registar Compra a Cliente</h2>
+        <div class="mode-toggle-bar">
+            <span class="mode-label">Modo:</span>
+            <div class="mode-toggle-group" id="cliente-mode-toggle">
+                <button class="mode-btn active" data-mode="Compra" onclick="setClienteMode('Compra', this)">
+                    📥 Compra a Cliente
+                </button>
+                <button class="mode-btn" data-mode="Venda" onclick="setClienteMode('Venda', this)">
+                    📤 Venda a Cliente
+                </button>
+            </div>
+        </div>
+
+        <h2 id="cliente-tab-title">Registar Compra a Cliente</h2>
         <div class="name-field">
             <label>NOME DO CLIENTE:</label>
             <input type="text" id="cliente-nome" placeholder="Ex: Manuel Silva...">
         </div>
         <div id="compra-items"></div>
-        <button class="add-btn" onclick="addItem('compra-items', 'cliente_compra')">+ Peixe</button>
+        <button class="add-btn" id="cliente-add-btn" onclick="addClienteItem()">+ Peixe</button>
 
-        <div class="extra-section">
+        <div class="extra-section" id="extras-section">
             <label>Extras/Deduções:</label>
             <div id="venda-items"></div>
             <button class="add-btn" onclick="addItem('venda-items', 'cliente_venda')">+ Extra</button>
@@ -73,10 +86,10 @@
             <span class="money-val" id="total-cliente">0$</span>
             <div class="stats-val" id="stats-cliente">Peixes: 0 | Caixas: 0 | Outros: 0</div>
         </div>
-        <button class="save-btn" onclick="saveTransaction('Cliente')">Finalizar e Guardar</button>
+        <button class="save-btn" onclick="saveClienteTransaction()">Finalizar e Guardar</button>
 
         <div class="mini-history">
-            <h3>Últimas Compras a Clientes:</h3>
+            <h3>Últimas Transações com Clientes:</h3>
             <table class="unified-table">
                 <thead>
                     <tr>
@@ -94,22 +107,34 @@
     </div>
 
     <div id="patrao-tab" class="tab-content">
-        <h2>Venda ao Patrão</h2>
+        <div class="mode-toggle-bar">
+            <span class="mode-label">Modo:</span>
+            <div class="mode-toggle-group" id="patrao-mode-toggle">
+                <button class="mode-btn active" data-mode="Venda" onclick="setPatraoMode('Venda', this)">
+                    📤 Venda ao Patrão
+                </button>
+                <button class="mode-btn" data-mode="Compra" onclick="setPatraoMode('Compra', this)">
+                    📥 Compra ao Patrão
+                </button>
+            </div>
+        </div>
+
+        <h2 id="patrao-tab-title">Compra ao Patrão</h2>
         <div class="name-field">
             <label>OBSERVAÇÕES:</label>
             <input type="text" id="patrao-obs" placeholder="Ex: Venda Manhã...">
         </div>
         <div id="patrao-items"></div>
-        <button class="add-btn" onclick="addItem('patrao-items', 'patrao')">+ Adicionar Item</button>
+        <button class="add-btn" id="patrao-add-btn" onclick="addPatraoItem()">+ Adicionar Item</button>
 
         <div class="total-display">
             <span class="money-val" id="total-patrao">0$</span>
             <div class="stats-val" id="stats-patrao">Peixes: 0 | Caixas: 0 | Outros: 0</div>
         </div>
-        <button class="save-btn" onclick="saveTransaction('Patrão')">Finalizar e Guardar</button>
+        <button class="save-btn" onclick="savePatraoTransaction()">Finalizar e Guardar</button>
 
         <div class="mini-history">
-            <h3>Últimas Vendas ao Patrão:</h3>
+            <h3>Últimas Transações com o Patrão:</h3>
             <table class="unified-table">
                 <thead>
                     <tr>
@@ -122,6 +147,46 @@
                     </tr>
                 </thead>
                 <tbody id="mini-table-patrao-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="craft-tab" class="tab-content">
+        <div class="tab-header">
+            <h2>Preços e Craft</h2>
+        </div>
+
+        <div class="section-card">
+            <div class="section-header">
+                <h3>Tabela de Preços (Compra)</h3>
+            </div>
+            <table class="unified-table">
+                <thead>
+                    <tr>
+                        <th style="width:70%;">Produto</th>
+                        <th style="width:30%;">Preço</th>
+                    </tr>
+                </thead>
+                <tbody id="market-prices-body">
+                    </tbody>
+            </table>
+        </div>
+
+        <div style="margin-top: 24px;"></div>
+
+        <div class="section-card">
+            <div class="section-header">
+                <h3>Materiais de Craft</h3>
+            </div>
+            <table class="unified-table">
+                <thead>
+                    <tr>
+                        <th style="width:40%;">Item</th>
+                        <th style="width:60%;">Materiais Necessários</th>
+                    </tr>
+                </thead>
+                <tbody id="craft-recipes-body">
+                    </tbody>
             </table>
         </div>
     </div>
