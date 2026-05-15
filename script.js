@@ -15,7 +15,7 @@ let currentUser = null;
 
 // Modos ativos por tab: 'Compra' ou 'Venda'
 let clienteMode = "Compra";
-let patraoMode  = "Compra";
+let patraoMode = "Venda";
 
 // ══════════════════════════════════════════════════════════
 //  AUTH
@@ -207,21 +207,6 @@ const precos = {
     "Plastico/Sucata (Un)": 80,
   },
 
-  // ─── Alias antigos para compatibilidade ──────
-  patrao: {
-    "Caixa de Sardinha": 14000,
-    "Caixa de Robalo":   14500,
-    "Caixa de Bacalhau": 20000,
-    "Caixa de Tartaruga":65000,
-    "Caixa de Tubarao":  90000,
-    "Sardinha (Un)":       140,
-    "Robalo (Un)":         250,
-    "Bacalhau (Un)":       280,
-    "Tartaruga (Un)":     1700,
-    "Tubarao (Un)":       1800,
-    "Plastico/Sucata (Un)": 80,
-    "Cana Grossa (Un)":    800,
-  },
 };
 
 // ══════════════════════════════════════════════════════════
@@ -299,6 +284,7 @@ function addPatraoItem() {
   addItem("patrao-items", cat);
 }
 
+// 1. Modifica a função addItem para incluir um marcador de preço por linha
 function addItem(containerId, category, nomeSelecionado = null, qty = 1) {
   const container = document.getElementById(containerId);
   const div = document.createElement("div");
@@ -315,21 +301,13 @@ function addItem(containerId, category, nomeSelecionado = null, qty = 1) {
       ${options}
     </select></div>
     <div class="col" style="max-width:80px;"><input type="number" class="prod-qty" value="${qty}" min="1" oninput="updateCalculations()"></div>
+    <div class="item-line-total" style="min-width:70px; text-align:right; font-weight:700; color:var(--ocean);">0$</div>
     <button class="remove-btn" onclick="this.parentElement.remove(); updateCalculations();">X</button>`;
   container.appendChild(div);
   updateCalculations();
 }
 
-function updateCalculations() {
-  let resC = calcStats("#compra-items .row", "#venda-items .row");
-  document.getElementById("total-cliente").innerText = `${resC.dinheiro.toLocaleString("pt-PT")}$`;
-  document.getElementById("stats-cliente").innerText  = `Peixes: ${resC.peixes} | Caixas: ${resC.caixas} | Outros: ${resC.outros}`;
-
-  let resP = calcStats("#patrao-items .row");
-  document.getElementById("total-patrao").innerText = `${resP.dinheiro.toLocaleString("pt-PT")}$`;
-  document.getElementById("stats-patrao").innerText  = `Peixes: ${resP.peixes} | Caixas: ${resP.caixas} | Outros: ${resP.outros}`;
-}
-
+// 2. Atualiza o calcStats para calcular os valores individuais
 function calcStats(posId, negId = null) {
   let stats = { dinheiro: 0, peixes: 0, caixas: 0, outros: 0 };
   const process = (selector, mult) => {
@@ -337,12 +315,66 @@ function calcStats(posId, negId = null) {
       const sel  = r.querySelector(".prod-select");
       const name = sel.options[sel.selectedIndex].text;
       const qty  = parseInt(r.querySelector(".prod-qty").value) || 0;
-      stats.dinheiro += parseFloat(sel.value) * qty * mult;
+      const precoUnitario = parseFloat(sel.value) || 0;
+      
+      const subtotal = precoUnitario * qty;
+      
+      // Atualiza o total visual daquela linha específica
+      const lineDisplay = r.querySelector(".item-line-total");
+      if (lineDisplay) lineDisplay.innerText = `${subtotal.toLocaleString("pt-PT")}$`;
+
+      stats.dinheiro += subtotal * mult;
+      
       if (name.toLowerCase().includes("caixa")) stats.caixas += qty;
       else if (name.match(/cana|isca|rede|plástico/i))  stats.outros += qty;
       else stats.peixes += qty;
     });
   };
+  process(posId, 1);
+  if (negId) process(negId, -1);
+  return stats;
+}
+
+function updateCalculations() {
+  // Processar Cliente
+  let resC = calcStats("#compra-items .row", "#venda-items .row");
+  document.getElementById("total-cliente").innerText = `${resC.dinheiro.toLocaleString("pt-PT")}$`;
+  
+  // Criar string detalhada para o total de cada peixe/item
+  let detalhesC = `Peixes: ${resC.peixes} | Caixas: ${resC.caixas} | Outros: ${resC.outros}`;
+  document.getElementById("stats-cliente").innerText = detalhesC;
+
+  // Processar Patrão
+  let resP = calcStats("#patrao-items .row");
+  document.getElementById("total-patrao").innerText = `${resP.dinheiro.toLocaleString("pt-PT")}$`;
+  document.getElementById("stats-patrao").innerText = `Peixes: ${resP.peixes} | Caixas: ${resP.caixas} | Outros: ${resP.outros}`;
+}
+
+function calcStats(posId, negId = null) {
+  let stats = { dinheiro: 0, peixes: 0, caixas: 0, outros: 0 };
+  
+  const process = (selector, mult) => {
+    document.querySelectorAll(selector).forEach(r => {
+      const sel = r.querySelector(".prod-select");
+      const qtyInput = r.querySelector(".prod-qty");
+      const lineTotalDisplay = r.querySelector(".item-line-total");
+      
+      const price = parseFloat(sel.value) || 0;
+      const qty = parseInt(qtyInput.value) || 0;
+      const lineTotal = price * qty;
+      
+      // Atualiza o total visual da linha se o elemento existir
+      if (lineTotalDisplay) lineTotalDisplay.innerText = `${lineTotal.toLocaleString("pt-PT")}$`;
+      
+      stats.dinheiro += lineTotal * mult;
+      
+      const name = sel.options[sel.selectedIndex].text;
+      if (name.toLowerCase().includes("caixa")) stats.caixas += qty;
+      else if (name.match(/cana|isca|rede|plástico/i)) stats.outros += qty;
+      else stats.peixes += qty;
+    });
+  };
+
   process(posId, 1);
   if (negId) process(negId, -1);
   return stats;
@@ -671,34 +703,37 @@ const dadosCraft = {
 };
 
 function renderCraftInfo() {
-    const pBody = document.getElementById('market-prices-body');
-    const rBody = document.getElementById('craft-recipes-body');
-    const calcSelect = document.getElementById('calc-item-select');
+  const pBody = document.getElementById('market-prices-body');
+  const rBody = document.getElementById('craft-recipes-body');
+  const calcSelect = document.getElementById('calc-item-select');
 
-    if (pBody) {
-        pBody.innerHTML = dadosCraft.precos.map(p => `
-            <tr>
-                <td class="text-bold">${p.nome}</td>
-                <td class="money-text" style="color: var(--success-dk); font-weight: 700;">${p.preco}</td>
-            </tr>
-        `).join('');
-    }
+  if (pBody) {
+      pBody.innerHTML = dadosCraft.precos.map(p => `
+          <tr>
+              <td class="text-bold">${p.nome}</td>
+              <td class="money-text" style="color: var(--success-dk); font-weight: 700;">${p.preco}</td>
+          </tr>
+      `).join('');
+  }
 
-    if (rBody) {
-        rBody.innerHTML = dadosCraft.receitas.map(r => `
-            <tr>
-                <td class="text-bold" style="color: var(--navy);">${r.item} <small>(Faz ${r.produz}x)</small></td>
-                <td class="text-mid" style="font-size: 13px; line-height: 1.4;">${r.materiais}</td>
-            </tr>
-        `).join('');
-    }
+  if (rBody) {
+      rBody.innerHTML = dadosCraft.receitas.map(r => `
+          <tr>
+              <td class="text-bold" style="color: var(--navy);">${r.item} <small>(Faz ${r.produz}x)</small></td>
+              <td class="text-mid" style="font-size: 13px; line-height: 1.4;">${r.materiais}</td>
+          </tr>
+      `).join('');
+  }
 
-    if (calcSelect) {
-        calcSelect.innerHTML = dadosCraft.receitas.map((r, index) => 
-            `<option value="${index}">${r.item} (Pack de ${r.produz})</option>`
-        ).join('');
-        calcularRecursos();
-    }
+  if (calcSelect) {
+      calcSelect.innerHTML = dadosCraft.receitas.map((r, index) => 
+          `<option value="${index}">${r.item} (Pack de ${r.produz})</option>`
+      ).join('');
+      
+      // Forçamos o valor para o primeiro item (index 0) e calculamos
+      calcSelect.value = "0"; 
+      calcularRecursos();
+  }
 }
 
 function calcularRecursos() {
@@ -739,33 +774,32 @@ function calcularRecursos() {
     resultDiv.style.display = 'block';
 }
 
-// Chamar esta função no final do teu DOMContentLoaded
+
+// ══════════════════════════════════════════════════════════
+//  INIT UNIFICADO - Executa uma única vez no carregamento
+// ══════════════════════════════════════════════════════════
+
 document.addEventListener("DOMContentLoaded", () => {
-    // ... tuas outras funções (renderAllTables, etc)
+    console.log("Yellow Fish Pro: Inicializando sistema...");
+
+    // 1. Sincronizar Modos (Garante que o JS condiz com o HTML)
+    clienteMode = "Compra";
+    patraoMode  = "Venda"; // Define como Venda para o select não vir vazio ou errado
+
+    // 2. Configurar Abas (Recuperar última aberta ou usar default)
+    const activeTab = localStorage.getItem('activeTab') || 'cliente-tab';
+    const savedBtn  = Array.from(document.querySelectorAll(".tab-btn"))
+                           .find(b => b.getAttribute('onclick')?.includes(activeTab));
+    
+    openTab(activeTab, savedBtn);
+
+    // 3. Inicializar Itens por Defeito (Preenche as tabelas vazias)
+    addClienteItem();
+    addPatraoItem();
+
+    // 4. Renderizar Dados Estáticos (Preços, Receitas e Calculadora)
     renderCraftInfo();
+
+    // 5. Iniciar Autenticação (Supabase)
+    initAuth(); 
 });
-
-
-
-document.addEventListener("DOMContentLoaded", () => {
- 
-  const activeTab = localStorage.getItem('activeTab') || 'cliente-tab';
-  const savedBtn = Array.from(document.querySelectorAll(".tab-btn"))
-                        .find(b => b.getAttribute('onclick')?.includes(activeTab));
-  
-  openTab(activeTab, savedBtn);
-  initAuth(); 
-});
-
-
-
-// ══════════════════════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════════════════════
-
-document.addEventListener("DOMContentLoaded", () => {
-  addClienteItem();
-  addPatraoItem();
-  initAuth(); // Inicia auth só depois do DOM estar pronto
-});
-
