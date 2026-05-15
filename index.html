@@ -189,6 +189,32 @@
                     </tbody>
             </table>
         </div>
+
+        <div style="margin-top: 24px;"></div>
+
+        <div class="section-card">
+            <div class="section-header">
+                <h3>Calculadora de Produção</h3>
+            </div>
+            <div class="name-field" style="border-left-color: var(--purple);">
+                <div class="row">
+                    <div class="col">
+                        <label>O QUE QUERES FAZER?</label>
+                        <select id="calc-item-select" onchange="calcularRecursos()">
+                            </select>
+                    </div>
+                    <div class="col" style="max-width:120px;">
+                        <label>QUANTIDADE</label>
+                        <input type="number" id="calc-qty" value="1" min="1" oninput="calcularRecursos()">
+                    </div>
+                </div>
+            </div>
+
+            <div id="calc-result" class="extra-section" style="display:none; background: var(--surface); border-color: var(--purple);">
+                <label style="color: var(--purple-dk);">RECURSOS TOTAIS NECESSÁRIOS:</label>
+                <div id="recursos-lista" style="font-weight: 600; color: var(--navy);"></div>
+            </div>
+        </div>
     </div>
 
     <div id="db-tab" class="tab-content">

@@ -648,6 +648,7 @@ async function clearHistory() {
 
 
 // Dados atualizados: Sem raridade e com Cana Grossa
+// Atualiza esta parte no teu script.js
 const dadosCraft = {
     precos: [
         { nome: "Sardinha", preco: "100€" },
@@ -663,15 +664,16 @@ const dadosCraft = {
         { nome: "Cana Grossa", preco: "1000€" }
     ],
     receitas: [
-        { item: "Caixa 10x", materiais: "10x Fio de Nylon, 25x Plástico" },
-        { item: "Cana Grossa 5x", materiais: "5x Fio de Nylon, 5x Aço, 5x Borracha, 5x Tabúa" },
-        { item: "Rede de Pesca", materiais: "5x Plástico, 15x Fio de Nylon" }
+        { item: "Caixa", produz: 10, materiais: "10x Fio de Nylon, 25x Plástico" },
+        { item: "Cana Grossa", produz: 5, materiais: "5x Fio de Nylon, 5x Aço, 5x Borracha, 5x Tabúa" },
+        { item: "Rede de Pesca", produz: 7, materiais: "5x Plástico, 15x Fio de Nylon" }
     ]
 };
 
 function renderCraftInfo() {
     const pBody = document.getElementById('market-prices-body');
     const rBody = document.getElementById('craft-recipes-body');
+    const calcSelect = document.getElementById('calc-item-select');
 
     if (pBody) {
         pBody.innerHTML = dadosCraft.precos.map(p => `
@@ -685,11 +687,56 @@ function renderCraftInfo() {
     if (rBody) {
         rBody.innerHTML = dadosCraft.receitas.map(r => `
             <tr>
-                <td class="text-bold" style="color: var(--navy);">${r.item}</td>
+                <td class="text-bold" style="color: var(--navy);">${r.item} <small>(Faz ${r.produz}x)</small></td>
                 <td class="text-mid" style="font-size: 13px; line-height: 1.4;">${r.materiais}</td>
             </tr>
         `).join('');
     }
+
+    if (calcSelect) {
+        calcSelect.innerHTML = dadosCraft.receitas.map((r, index) => 
+            `<option value="${index}">${r.item} (Pack de ${r.produz})</option>`
+        ).join('');
+        calcularRecursos();
+    }
+}
+
+function calcularRecursos() {
+    const itemIndex = document.getElementById('calc-item-select').value;
+    const qtdDesejada = parseInt(document.getElementById('calc-qty').value) || 0;
+    const resultDiv = document.getElementById('calc-result');
+    const listaDiv = document.getElementById('recursos-lista');
+
+    if (qtdDesejada <= 0) {
+        resultDiv.style.display = 'none';
+        return;
+    }
+
+    const receita = dadosCraft.receitas[itemIndex];
+    
+    // LÓGICA: Quantas vezes precisamos de fazer a receita?
+    // Ex: Queres 20 caixas, receita faz 10 -> Precisas de 2 "crafts".
+    // Usamos Math.ceil para arredondar para cima (se quiseres 11 caixas, tens de fazer 2 receitas).
+    const vezesParaCraftar = Math.ceil(qtdDesejada / receita.produz);
+    
+    const materiais = receita.materiais.split(', ');
+    
+    let htmlGerado = `<div style="margin-bottom:8px; font-size:12px; color:var(--text-lt);">
+                        Para obter ${qtdDesejada} unidades, terá de fabricar a receita <b>${vezesParaCraftar}x</b>.
+                      </div>`;
+
+    materiais.forEach(m => {
+        const partes = m.match(/(\d+)x (.+)/);
+        if (partes) {
+            const qtdBase = parseInt(partes[1]);
+            const nomeMaterial = partes[2];
+            const totalNecessario = qtdBase * vezesParaCraftar;
+            htmlGerado += `<div>• <b>${totalNecessario}x</b> ${nomeMaterial}</div>`;
+        }
+    });
+
+    listaDiv.innerHTML = htmlGerado;
+    resultDiv.style.display = 'block';
 }
 
 // Chamar esta função no final do teu DOMContentLoaded
