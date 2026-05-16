@@ -534,13 +534,13 @@ function renderAllTables() {
 
   historico.forEach(p => {
     const trContent = `
-      <td>${p.data}</td>
-      <td><strong>${p.entidade}</strong></td>
-      <td>${p.tipo}</td>
-      <td>${p.detalhes}</td>
-      <td class="${p.total >= 0 ? "val-pos" : "val-neg"}">${p.total.toLocaleString("pt-PT")}$</td>
-      <td style="text-align:center">
-        <button class="btn-edit-row"   onclick="editItem(${p.id})">✏️</button>
+      <td data-label="Data">${p.data}</td>
+      <td data-label="Entidade"><strong>${p.entidade}</strong></td>
+      <td data-label="Tipo">${p.tipo}</td>
+      <td data-label="Detalhes">${p.detalhes}</td>
+      <td data-label="Total" class="${p.total >= 0 ? "val-pos" : "val-neg"}">${p.total.toLocaleString("pt-PT")}$</td>
+      <td data-label="Ações">
+        <button class="btn-edit-row" onclick="editItem(${p.id})">✏️</button>
         <button class="btn-delete-row" onclick="deleteItem(${p.id})">🗑️</button>
       </td>`;
 

@@ -607,15 +607,214 @@ button { cursor: pointer; border: none; border-radius: var(--radius); font-famil
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-lt); }
 
+
+
+/* ══════════════════════════════════════════
+    RESPONSIVIDADE CONSOLIDADA (MOBILE)
+   ══════════════════════════════════════════ */
 @media (max-width: 640px) {
-    body { padding: 12px 8px 32px; }
-    .tab-content { padding: 18px 14px; }
-    .tabs { padding: 0 2px; }
-    .tab-btn { font-size: 11px; padding: 13px 6px; }
-    .db-actions { flex-direction: column; }
-    .load-btn { justify-content: center; }
-    .money-val { font-size: 28px; }
-    .login-box { padding: 30px 20px; }
+    /* Estrutura Base */
+    body { 
+        padding: 8px 4px 20px; 
+    }
+    .tab-content { 
+        padding: 16px 12px; 
+    }
+    .login-box { 
+        padding: 30px 20px; 
+    }
+    
+    /* Navegação e Botões */
+    .tabs { 
+        padding: 0 2px; 
+    }
+    .tab-btn { 
+        font-size: 10px; 
+        padding: 12px 4px; 
+        letter-spacing: 0.02em;
+    }
+    .db-actions { 
+        flex-direction: column; 
+    }
+    .load-btn { 
+        justify-content: center; 
+    }
+
+    /* Grid System (.row) - Layout em Blocos/Cartões */
+    .row {
+        display: grid !important;
+        grid-template-areas: 
+            "select select"
+            "qty value"
+            "delete delete"; 
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        background: var(--surface);
+        padding: 15px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        margin-bottom: 16px;
+    }
+    
+    .col { 
+        width: 100%; 
+    }
+    .col[style*="max-width"] { 
+        max-width: 100% !important; 
+    }
+
+    /* Elementos Internos da Row */
+    .row .col:first-child { 
+        grid-area: select; 
+    }
+    
+    .row .col:nth-child(2) { 
+        grid-area: qty; 
+        max-width: 100px !important; /* Mantém o input numérico controlado */
+    }
+
+    select, .prod-qty {
+        height: 48px !important; /* Otimizado para touch */
+        font-size: 16px !important; /* Evita zoom automático no iOS */
+        width: 100% !important;
+    }
+
+    select {
+        padding-right: 25px;
+    }
+
+    .prod-qty {
+        text-align: center;
+        padding: 8px 4px;
+    }
+
+    /* Preço por linha */
+    .item-line-total {
+        grid-area: value;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--ocean);
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+    }
+
+    /* Botão de Remoção Expandido */
+    .remove-btn {
+        grid-area: delete;
+        width: 100% !important;
+        height: 36px;
+        background: rgba(232, 56, 26, 0.08);
+        border: 1px solid rgba(232, 56, 26, 0.2);
+        color: var(--danger);
+        text-transform: uppercase;
+        margin: 4px 0 0 0;
+        font-size: 0; /* Oculta o "X" original do HTML */
+    }
+    
+    .remove-btn::before {
+        content: "Remover Item"; 
+        font-size: 12px;
+        font-weight: 700;
+        display: block;
+    }
+
+    /* Tabelas de Preços e Craft (Layout Compacto) */
+    #craft-tab .unified-table {
+        table-layout: auto;
+        font-size: 13px;
+    }
+    #craft-tab .unified-table td {
+        white-space: normal;
+        padding: 8px;
+    }
+
+    /* Tabelas de Histórico (Transformadas em Cartões Dinâmicos) */
+    #db-tab .unified-table, 
+    .mini-history .unified-table {
+        display: block;
+        border: none;
+    }
+    #db-tab .unified-table thead, 
+    .mini-history .unified-table thead {
+        display: none;
+    }
+    #db-tab .unified-table tr, 
+    .mini-history .unified-table tr {
+        display: block;
+        margin-bottom: 15px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--white) !important;
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+    }
+    #db-tab .unified-table td, 
+    .mini-history .unified-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-align: right;
+        padding: 10px 15px;
+        border-bottom: 1px solid var(--surface);
+        white-space: normal;
+        width: 100% !important;
+    }
+    #db-tab .unified-table td::before, 
+    .mini-history .unified-table td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 10px;
+        color: var(--text-lt);
+        text-align: left;
+    }
+    #db-tab .unified-table td:last-child, 
+    .mini-history .unified-table td:last-child {
+        background: var(--surface);
+        justify-content: center;
+        gap: 20px;
+        border-bottom: none;
+    }
+
+    /* UI Fixes Finais */
+    .money-val { 
+        font-size: 28px; 
+    }
 }
 
 
+
+@media (max-width: 640px) {
+    /* ... outras regras ... */
+
+    .mode-toggle-bar {
+        display: block; /* Remove o flex que coloca o "Modo" ao lado */
+        padding: 10px;
+        background: transparent; /* Opcional: torna mais limpo */
+        border: none;
+    }
+
+    .mode-label {
+        display: none; /* Esconde o texto "MODO:" no mobile */
+    }
+
+    .mode-toggle-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* Coloca os dois botões lado a lado */
+        gap: 8px;
+        width: 100%;
+    }
+
+    .mode-btn {
+        width: 100%;
+        margin: 0;
+        justify-content: center;
+        height: 46px; /* Altura confortável para o polegar */
+        font-size: 12px;
+        padding: 5px;
+    }
+}
