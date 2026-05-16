@@ -271,7 +271,7 @@ function setPatraoMode(mode, btn) {
   btn.classList.add("active");
 
   const isCompra = mode === "Compra";
-  document.getElementById("patrao-tab-title").textContent = isCompra ? "Compra ao Patrão" : "Venda ao Patrão";
+  document.getElementById("patrao-tab-title").textContent = isCompra ? "Registar Compra ao Patrão" : "Registar Venda ao Patrão";
   document.getElementById("patrao-add-btn").textContent   = isCompra ? "+ Adicionar Item" : "+ Adicionar Item";
 
   document.getElementById("patrao-items").innerHTML = "";
@@ -370,7 +370,7 @@ function calcStats(posId, negId = null) {
       
       const name = sel.options[sel.selectedIndex].text;
       if (name.toLowerCase().includes("caixa")) stats.caixas += qty;
-      else if (name.match(/cana|isca|rede|plástico/i)) stats.outros += qty;
+      else if (name.match(/cana|isca|rede|plástico|sucata|pedaços/i)) stats.outros += qty;
       else stats.peixes += qty;
     });
   };
