@@ -166,27 +166,30 @@ async function deleteSupabase(id) {
 
 const precos = {
   // ─── CLIENTE ──────────────────────────────────
-  cliente_compra: {         // nós compramos AO cliente (ele traz peixe)
-    Sardinha:  100,
-    Robalo:    170,
-    Bacalhau:  175,
-    Tartaruga: 1200,
-    Tubarao:   1700,
-    "Plastico/Sucata (Un)": 80,
+  cliente_compra: {         // nós compramos AO cliente (ele traz peixe) — range {min, max}
+    Sardinha:              { min: 100,  max: 120  },
+    Robalo:                { min: 170,  max: 200  },
+    Bacalhau:              { min: 175,  max: 220  },
+    Tartaruga:             { min: 1000, max: 1200 },
+    Tubarao:               { min: 1500, max: 1700 },
+    "Cana ilegal":         { min: 800,  max: 1000 },
+    "Isca ilegal":         { min: 15,   max: 25   },
+    "Rede Pesca":          { min: 350,  max: 450  },
+    "Plastico/Sucata (Un)":{ min: 80,   max: 80   },
   },
-  cliente_venda: {          // nós vendemos AO cliente (extras / deduções na compra)
-    Iscas:      15,
-    "Pedaços de Sardinha": 25,
-    Cana:      200,
-    Redes:     450,
-    "Cana Grossa":1000,
+  cliente_venda: {          // nós vendemos AO cliente (extras / deduções na compra) — range {min, max}
+    Iscas:                 { min: 15,   max: 25   },
+    "Pedaços de Sardinha": { min: 25,   max: 25   },
+    Cana:                  { min: 200,  max: 200  },
+    Redes:                 { min: 350,  max: 450  },
+    "Cana Grossa":         { min: 800,  max: 1000 },
   },
-  cliente_venda_peixe: {    // nós vendemos peixe AO cliente
-    Iscas:      15,
-    "Pedaços de Sardinha": 25,
-    Cana:      200,
-    Redes:     450,
-    "Cana Grossa": 1000,
+  cliente_venda_peixe: {    // nós vendemos peixe AO cliente — range {min, max}
+    Iscas:                 { min: 15,   max: 25   },
+    "Pedaços de Sardinha": { min: 25,   max: 25   },
+    Cana:                  { min: 200,  max: 200  },
+    Redes:                 { min: 450,  max: 450  },
+    "Cana Grossa":         { min: 1000, max: 1000 },
   },
 
   // ─── PATRÃO ──────────────────────────────────
@@ -284,56 +287,88 @@ function addPatraoItem() {
   addItem("patrao-items", cat);
 }
 
+// Helper: checks if a category uses range prices {min, max}
+function isRangeCategory(category) {
+  const vals = Object.values(precos[category]);
+  return vals.length > 0 && typeof vals[0] === 'object' && vals[0] !== null;
+}
+
+// Helper: get price value (flat or range object -> returns number)
+function getPrecoVal(category, nome) {
+  const v = precos[category][nome];
+  return (typeof v === 'object' && v !== null) ? v.max : v;
+}
+
 // 1. Modifica a função addItem para incluir um marcador de preço por linha
-function addItem(containerId, category, nomeSelecionado = null, qty = 1) {
+function addItem(containerId, category, nomeSelecionado = null, qty = 1, precoCustom = null) {
   const container = document.getElementById(containerId);
   const div = document.createElement("div");
   div.className = "row";
+  const isRange = isRangeCategory(category);
 
   const options = Object.keys(precos[category])
-    .map(p => {
-      const selected = (nomeSelecionado && p === nomeSelecionado) ? "selected" : "";
-      return `<option value="${precos[category][p]}" ${selected}>${p} (${precos[category][p]}$)</option>`;
+    .map(nome => {
+      const selected = (nomeSelecionado && nome === nomeSelecionado) ? "selected" : "";
+      const val = precos[category][nome];
+      const flatVal = (typeof val === 'object' && val !== null) ? val.max : val;
+      const label = (typeof val === 'object' && val !== null && val.min !== val.max)
+        ? `${nome} (${val.min}$–${val.max}$)`
+        : `${nome} (${flatVal}$)`;
+      return `<option value="${flatVal}" data-min="${typeof val === 'object' ? val.min : flatVal}" data-max="${typeof val === 'object' ? val.max : flatVal}" ${selected}>${label}</option>`;
     }).join("");
 
+  // First product to determine range for price input
+  const firstVal = Object.values(precos[category])[0];
+  const firstIsRange = typeof firstVal === 'object' && firstVal !== null;
+  const initMin = firstIsRange ? firstVal.min : (firstVal || 0);
+  const initMax = firstIsRange ? firstVal.max : (firstVal || 0);
+  const initPrice = precoCustom !== null ? precoCustom : initMax;
+
+  const priceInputHtml = isRange
+    ? `<div class="col price-range-col">
+         <input type="number" class="prod-price" value="${initPrice}" min="${initMin}" max="${initMax}" oninput="updateCalculations()" title="${initMin}$–${initMax}$">
+         <span class="price-range-label"></span>
+       </div>`
+    : ``;
+
   div.innerHTML = `
-    <div class="col"><select class="prod-select" onchange="updateCalculations()">
+    <div class="col"><select class="prod-select" onchange="onSelectChange(this); updateCalculations()">
       ${options}
     </select></div>
+    ${priceInputHtml}
     <div class="col" style="max-width:80px;"><input type="number" class="prod-qty" value="${qty}" min="1" oninput="updateCalculations()"></div>
     <div class="item-line-total" style="min-width:70px; text-align:right; font-weight:700; color:var(--ocean);">0$</div>
     <button class="remove-btn" onclick="this.parentElement.remove(); updateCalculations();">X</button>`;
   container.appendChild(div);
+
+  // Initialize the range label and price input for the initially selected option
+  const sel = div.querySelector(".prod-select");
+  if (sel) onSelectChange(sel);
+
   updateCalculations();
 }
 
-// 2. Atualiza o calcStats para calcular os valores individuais
-function calcStats(posId, negId = null) {
-  let stats = { dinheiro: 0, peixes: 0, caixas: 0, outros: 0 };
-  const process = (selector, mult) => {
-    document.querySelectorAll(selector).forEach(r => {
-      const sel  = r.querySelector(".prod-select");
-      const name = sel.options[sel.selectedIndex].text;
-      const qty  = parseInt(r.querySelector(".prod-qty").value) || 0;
-      const precoUnitario = parseFloat(sel.value) || 0;
-      
-      const subtotal = precoUnitario * qty;
-      
-      // Atualiza o total visual daquela linha específica
-      const lineDisplay = r.querySelector(".item-line-total");
-      if (lineDisplay) lineDisplay.innerText = `${subtotal.toLocaleString("pt-PT")}$`;
-
-      stats.dinheiro += subtotal * mult;
-      
-      if (name.toLowerCase().includes("caixa")) stats.caixas += qty;
-      else if (name.match(/cana|isca|rede|plástico/i))  stats.outros += qty;
-      else stats.peixes += qty;
-    });
-  };
-  process(posId, 1);
-  if (negId) process(negId, -1);
-  return stats;
+function onSelectChange(sel) {
+  const row = sel.closest(".row");
+  if (!row) return;
+  const opt = sel.options[sel.selectedIndex];
+  const min = parseFloat(opt.getAttribute("data-min")) || 0;
+  const max = parseFloat(opt.getAttribute("data-max")) || 0;
+  const priceInput = row.querySelector(".prod-price");
+  const rangeLabel = row.querySelector(".price-range-label");
+  if (priceInput) {
+    priceInput.min = min;
+    priceInput.max = max;
+    priceInput.title = `${min}$–${max}$`;
+    const cur = parseFloat(priceInput.value) || 0;
+    if (cur < min || cur > max) priceInput.value = max;
+  }
+  if (rangeLabel) {
+    rangeLabel.textContent = ``;
+  }
 }
+
+// 2. Atualiza o calcStats para calcular os valores individuais
 
 function updateCalculations() {
   // Processar Cliente
@@ -357,9 +392,11 @@ function calcStats(posId, negId = null) {
     document.querySelectorAll(selector).forEach(r => {
       const sel = r.querySelector(".prod-select");
       const qtyInput = r.querySelector(".prod-qty");
+      const priceInput = r.querySelector(".prod-price");
       const lineTotalDisplay = r.querySelector(".item-line-total");
       
-      const price = parseFloat(sel.value) || 0;
+      // Use custom price input if present (range items), else use select value
+      const price = priceInput ? (parseFloat(priceInput.value) || 0) : (parseFloat(sel.value) || 0);
       const qty = parseInt(qtyInput.value) || 0;
       const lineTotal = price * qty;
       
@@ -410,7 +447,10 @@ async function saveTransaction(tipo) {
   const extrair = (sel, pre = "") =>
     document.querySelectorAll(sel).forEach(r => {
       const s = r.querySelector(".prod-select");
-      itens.push(`${pre}${r.querySelector(".prod-qty").value}x ${s.options[s.selectedIndex].text.split(" (")[0]}`);
+      const priceInput = r.querySelector(".prod-price");
+      const nomeProduto = s.options[s.selectedIndex].text.split(" (")[0];
+      const precoCustom = priceInput ? `@${parseFloat(priceInput.value)||0}` : "";
+      itens.push(`${pre}${r.querySelector(".prod-qty").value}x ${nomeProduto}${precoCustom}`);
     });
 
   if (isCliente) {
@@ -485,9 +525,9 @@ function editItem(idPedido) {
     document.getElementById("cliente-nome").value = pedido.entidade;
     const cat = clienteMode === "Compra" ? "cliente_compra" : "cliente_venda_peixe";
     const { compraItems, vendaItems } = parseDetalhes(pedido.detalhes, pedido.tipo);
-    compraItems.forEach(({ nome, qty }) => addItem("compra-items", cat, encontrarNomeNaCategoria(nome, cat), qty));
+    compraItems.forEach(({ nome, qty, preco }) => addItem("compra-items", cat, encontrarNomeNaCategoria(nome, cat), qty, preco));
     if (pedido.tipo === "Cliente-Compra") {
-      vendaItems.forEach(({ nome, qty }) => addItem("venda-items", "cliente_venda", encontrarNomeNaCategoria(nome, "cliente_venda"), qty));
+      vendaItems.forEach(({ nome, qty, preco }) => addItem("venda-items", "cliente_venda", encontrarNomeNaCategoria(nome, "cliente_venda"), qty, preco));
     }
     if (compraItems.length === 0) addClienteItem();
   } else {
@@ -498,7 +538,7 @@ function editItem(idPedido) {
     document.getElementById("patrao-obs").value = pedido.entidade;
     const cat = patraoMode === "Compra" ? "patrao_compra" : "patrao_venda";
     const { compraItems } = parseDetalhes(pedido.detalhes, pedido.tipo);
-    compraItems.forEach(({ nome, qty }) => addItem("patrao-items", cat, encontrarNomeNaCategoria(nome, cat) || encontrarNomeNaCategoria(nome, "patrao"), qty));
+    compraItems.forEach(({ nome, qty, preco }) => addItem("patrao-items", cat, encontrarNomeNaCategoria(nome, cat) || encontrarNomeNaCategoria(nome, "patrao"), qty, preco));
     if (compraItems.length === 0) addPatraoItem();
   }
 
@@ -567,11 +607,13 @@ function parseDetalhes(detalhes, tipo) {
   partes.forEach(parte => {
     const isExtra = parte.startsWith("[Extra] ");
     const texto   = isExtra ? parte.replace("[Extra] ", "") : parte;
-    const match   = texto.match(/^(\d+)x (.+)$/);
+    // Match: qty x nome[@price]
+    const match   = texto.match(/^(\d+)x (.+?)(?:@(\d+(?:\.\d+)?))?$/);
     if (!match) return;
-    const qty  = parseInt(match[1]);
-    const nome = match[2].trim();
-    (isExtra ? vendaItems : compraItems).push({ nome, qty });
+    const qty   = parseInt(match[1]);
+    const nome  = match[2].trim();
+    const preco = match[3] ? parseFloat(match[3]) : null;
+    (isExtra ? vendaItems : compraItems).push({ nome, qty, preco });
   });
 
   return { compraItems, vendaItems };

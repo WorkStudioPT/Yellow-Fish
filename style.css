@@ -818,3 +818,35 @@ button { cursor: pointer; border: none; border-radius: var(--radius); font-famil
         padding: 5px;
     }
 }
+/* ══════════════════════════════════════════
+   RANGE PRICE INPUT
+══════════════════════════════════════════ */
+.price-range-col {
+  display: flex;
+  align-items: center;
+  max-width: 110px;
+  flex: 0 0 110px;
+}
+
+.prod-price {
+  width: 100%;
+  padding: 8px 10px;
+  border: 2px solid var(--yellow-dk);
+  border-radius: var(--radius);
+  font-family: 'Lexend', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  background: var(--yellow-lt);
+  text-align: center;
+  transition: border-color var(--transition);
+}
+
+.prod-price:focus {
+  outline: none;
+  border-color: var(--yellow);
+  background: #fffbe8;
+}
+
+/* range shown via title tooltip on hover */
+.price-range-label { display: none; }
