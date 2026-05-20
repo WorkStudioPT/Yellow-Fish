@@ -172,23 +172,20 @@ const precos = {
     Bacalhau:              { min: 175,  max: 220  },
     Tartaruga:             { min: 1000, max: 1200 },
     Tubarao:               { min: 1500, max: 1700 },
-    "Cana ilegal":         { min: 800,  max: 1000 },
-    "Isca ilegal":         { min: 15,   max: 25   },
-    "Rede Pesca":          { min: 350,  max: 450  },
-    "Plastico/Sucata (Un)":{ min: 80,   max: 80   },
+    "Plastico/Sucata (Un)":{ min: 80,   max: 100   },
   },
   cliente_venda: {          // nós vendemos AO cliente (extras / deduções na compra) — range {min, max}
     Iscas:                 { min: 15,   max: 25   },
-    "Pedaços de Sardinha": { min: 25,   max: 25   },
+    "Pedaços de Sardinha": { min: 15,   max: 25   },
     Cana:                  { min: 200,  max: 200  },
     Redes:                 { min: 350,  max: 450  },
     "Cana Grossa":         { min: 800,  max: 1000 },
   },
   cliente_venda_peixe: {    // nós vendemos peixe AO cliente — range {min, max}
     Iscas:                 { min: 15,   max: 25   },
-    "Pedaços de Sardinha": { min: 25,   max: 25   },
+    "Pedaços de Sardinha": { min: 15,   max: 25   },
     Cana:                  { min: 200,  max: 200  },
-    Redes:                 { min: 450,  max: 450  },
+    Redes:                 { min: 350,  max: 450  },
     "Cana Grossa":         { min: 1000, max: 1000 },
   },
 
@@ -322,7 +319,7 @@ function addItem(containerId, category, nomeSelecionado = null, qty = 1, precoCu
   const firstIsRange = typeof firstVal === 'object' && firstVal !== null;
   const initMin = firstIsRange ? firstVal.min : (firstVal || 0);
   const initMax = firstIsRange ? firstVal.max : (firstVal || 0);
-  const initPrice = precoCustom !== null ? precoCustom : initMax;
+  const initPrice = precoCustom !== null ? precoCustom : initMin;
 
   const priceInputHtml = isRange
     ? `<div class="col price-range-col">
@@ -361,7 +358,7 @@ function onSelectChange(sel) {
     priceInput.max = max;
     priceInput.title = `${min}$–${max}$`;
     const cur = parseFloat(priceInput.value) || 0;
-    if (cur < min || cur > max) priceInput.value = max;
+    if (cur < min || cur > max) priceInput.value = min;
   }
   if (rangeLabel) {
     rangeLabel.textContent = ``;
