@@ -181,7 +181,7 @@ body {
 ══════════════════════════════════════════ */
 
 .container {
-    max-width: 1060px;
+    max-width: 1440px;
     margin: 0 auto;
     background: var(--white);
     border-radius: var(--radius-lg);
@@ -323,7 +323,7 @@ select {
     padding-right: 36px;
 }
 
-.row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
+.row-calc { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
 .col { flex: 1; }
 .col[style*="max-width"] { flex: 0 0 90px; }
 
@@ -645,6 +645,7 @@ button { cursor: pointer; border: none; border-radius: var(--radius); font-famil
         display: grid !important;
         grid-template-areas: 
             "select select"
+            "price price"
             "qty value"
             "delete delete"; 
         grid-template-columns: 1fr 1fr;
@@ -656,6 +657,11 @@ button { cursor: pointer; border: none; border-radius: var(--radius); font-famil
         margin-bottom: 16px;
     }
     
+    .item-select-col { grid-area: select; width: 100%; }
+    .price-range-col  { grid-area: price;  width: 100%; flex: unset; }
+    .item-qty-col     { grid-area: qty;    width: 100%; flex: unset; }
+    .item-line-total  { grid-area: value;  width: 100%; flex: unset; }
+
     .col { 
         width: 100%; 
     }
@@ -670,7 +676,7 @@ button { cursor: pointer; border: none; border-radius: var(--radius); font-famil
     
     .row .col:nth-child(2) { 
         grid-area: qty; 
-        max-width: 100px !important; /* Mantém o input numérico controlado */
+        max-width: 100px !important;
     }
 
     select, .prod-qty {
@@ -819,13 +825,65 @@ button { cursor: pointer; border: none; border-radius: var(--radius); font-famil
     }
 }
 /* ══════════════════════════════════════════
+   ITEM ROWS — CSS Grid partilhado por container
+══════════════════════════════════════════ */
+
+/* Containers que usam grid */
+#compra-items,
+#venda-items {
+  display: grid;
+  /* select | price | qty | total | X */
+  grid-template-columns: 1fr 100px 80px auto 36px;
+  column-gap: 8px;
+  row-gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+#patrao-items {
+  display: grid;
+  /* select | qty | total | X  (sem price) */
+  grid-template-columns: 1fr 80px auto 36px;
+  column-gap: 8px;
+  row-gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+/* .row usa display:contents para que os filhos participem no grid pai */
+#compra-items .row,
+#venda-items .row,
+#patrao-items .row {
+  display: contents;
+}
+
+/* Células individuais */
+.item-select-col {
+  min-width: 0;
+  overflow: hidden;
+}
+.item-select-col select,
+.item-select-col .prod-select {
+  width: 100%;
+}
+
+.item-qty-col { min-width: 0; }
+.item-qty-col input { width: 100%; text-align: right; }
+
+.item-line-total {
+  text-align: right;
+  font-weight: 700;
+  color: var(--ocean);
+  white-space: nowrap;
+}
+
+/* ══════════════════════════════════════════
    RANGE PRICE INPUT
 ══════════════════════════════════════════ */
 .price-range-col {
   display: flex;
   align-items: center;
-  max-width: 110px;
-  flex: 0 0 110px;
+  min-width: 0;
 }
 
 .prod-price {
@@ -838,7 +896,7 @@ button { cursor: pointer; border: none; border-radius: var(--radius); font-famil
   font-weight: 700;
   color: var(--navy);
   background: var(--yellow-lt);
-  text-align: center;
+  text-align: right;
   transition: border-color var(--transition);
 }
 

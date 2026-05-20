@@ -332,12 +332,12 @@ function addItem(containerId, category, nomeSelecionado = null, qty = 1, precoCu
     : ``;
 
   div.innerHTML = `
-    <div class="col"><select class="prod-select" onchange="onSelectChange(this); updateCalculations()">
+    <div class="col item-select-col"><select class="prod-select" onchange="onSelectChange(this); updateCalculations()">
       ${options}
     </select></div>
     ${priceInputHtml}
-    <div class="col" style="max-width:80px;"><input type="number" class="prod-qty" value="${qty}" min="1" oninput="updateCalculations()"></div>
-    <div class="item-line-total" style="min-width:70px; text-align:right; font-weight:700; color:var(--ocean);">0$</div>
+    <div class="col item-qty-col"><input type="number" class="prod-qty" value="${qty}" min="1" oninput="updateCalculations()"></div>
+    <div class="item-line-total">0$</div>
     <button class="remove-btn" onclick="this.parentElement.remove(); updateCalculations();">X</button>`;
   container.appendChild(div);
 
@@ -518,9 +518,13 @@ function editItem(idPedido) {
   document.getElementById("patrao-items").innerHTML = "";
 
   if (isCliente) {
-    // Restaura o modo correto
+    // Restaura o modo correto (setClienteMode adiciona 1 item por defeito, limpamos a seguir)
     const modeBtn = document.querySelector(`#cliente-mode-toggle .mode-btn[data-mode="${pedido.tipo === "Cliente-Venda" ? "Venda" : "Compra"}"]`);
     if (modeBtn) setClienteMode(pedido.tipo === "Cliente-Venda" ? "Venda" : "Compra", modeBtn);
+
+    // Limpa os itens adicionados por defeito pelo setClienteMode
+    document.getElementById("compra-items").innerHTML = "";
+    document.getElementById("venda-items").innerHTML  = "";
 
     document.getElementById("cliente-nome").value = pedido.entidade;
     const cat = clienteMode === "Compra" ? "cliente_compra" : "cliente_venda_peixe";
@@ -531,9 +535,12 @@ function editItem(idPedido) {
     }
     if (compraItems.length === 0) addClienteItem();
   } else {
-    // Restaura o modo correto
+    // Restaura o modo correto (setPatraoMode adiciona 1 item por defeito, limpamos a seguir)
     const modeBtn = document.querySelector(`#patrao-mode-toggle .mode-btn[data-mode="${pedido.tipo === "Patrão-Venda" ? "Venda" : "Compra"}"]`);
     if (modeBtn) setPatraoMode(pedido.tipo === "Patrão-Venda" ? "Venda" : "Compra", modeBtn);
+
+    // Limpa os itens adicionados por defeito pelo setPatraoMode
+    document.getElementById("patrao-items").innerHTML = "";
 
     document.getElementById("patrao-obs").value = pedido.entidade;
     const cat = patraoMode === "Compra" ? "patrao_compra" : "patrao_venda";
