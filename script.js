@@ -78,6 +78,25 @@ async function mostrarEcra(session) {
   }
 }
 
+// Garante que a sessão está válida antes de qualquer operação na BD.
+// Se o token expirou, tenta renová-lo. Devolve true se OK, false se falhou.
+async function ensureSession() {
+  const { data: { session }, error } = await db.auth.getSession();
+  if (error || !session) {
+    // Tenta renovar
+    const { data: refreshed, error: refreshErr } = await db.auth.refreshSession();
+    if (refreshErr || !refreshed?.session) {
+      alert("⚠️ A sessão expirou. Por favor, faz login novamente.");
+      await mostrarEcra(null);
+      return false;
+    }
+    currentUser = refreshed.session.user;
+  } else {
+    currentUser = session.user;
+  }
+  return true;
+}
+
 async function initAuth() {
   // 1. Verifica se já existe uma sessão guardada nos cookies assim que a página abre
   const { data: { session } } = await db.auth.getSession();
@@ -88,16 +107,27 @@ async function initAuth() {
     await mostrarEcra(null);
   }
 
-  // 2. Mantém o listener para mudanças futuras (login/logout)
+  // 2. Listener para mudanças de estado
   db.auth.onAuthStateChange(async (event, session) => {
     console.log("[Auth event]", event, session?.user?.email ?? "sem sessão");
     
-    if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+    if (event === "SIGNED_IN") {
+      // Primeiro login: carrega dados e mostra app
       await mostrarEcra(session);
+    } else if (event === "TOKEN_REFRESHED") {
+      // Apenas atualiza o utilizador atual — NÃO recarrega dados
+      if (session?.user) currentUser = session.user;
     } else if (event === "SIGNED_OUT") {
       await mostrarEcra(null);
     }
   });
+
+  // 3. Keepalive: renova a sessão proativamente a cada 45 minutos
+  //    (os tokens expiram ao fim de 1 hora — isto evita desconexões silenciosas)
+  setInterval(async () => {
+    console.log("[Keepalive] A renovar sessão...");
+    await db.auth.refreshSession();
+  }, 45 * 60 * 1000);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -121,6 +151,7 @@ async function loadFromSupabase() {
 }
 
 async function insertSupabase(pedido) {
+  if (!await ensureSession()) return null;
   const { data, error } = await db
     .from("transacoes")
     .insert([{
@@ -139,6 +170,7 @@ async function insertSupabase(pedido) {
 }
 
 async function updateSupabase(id, campos) {
+  if (!await ensureSession()) return false;
   const { error } = await db
     .from("transacoes")
     .update(campos)
@@ -150,6 +182,7 @@ async function updateSupabase(id, campos) {
 }
 
 async function deleteSupabase(id) {
+  if (!await ensureSession()) return false;
   const { error } = await db
     .from("transacoes")
     .delete()
