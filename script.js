@@ -499,11 +499,15 @@ async function saveTransaction(tipo) {
       detalhes: itens.join(" | "),
       total:    stats.dinheiro,
     };
+    console.log("[saveTransaction] A atualizar id:", idEmEdicao, campos);
     const ok = await updateSupabase(idEmEdicao, campos);
     if (!ok) return;
-    const index = historico.findIndex(p => p.id === idEmEdicao);
-    if (index !== -1) Object.assign(historico[index], campos);
-    alert("Pedido atualizado!");
+    // Recarrega sempre da BD para garantir que o historico em memória está correto,
+    // independentemente de quanto tempo a app esteve aberta
+    await loadFromSupabase();
+    cancelEdit();
+    renderAllTables();
+    alert("✅ Pedido atualizado!");
   } else {
     const novoPedido = {
       data:     new Date().toLocaleString("pt-PT"),
@@ -512,14 +516,14 @@ async function saveTransaction(tipo) {
       detalhes: itens.join(" | "),
       total:    stats.dinheiro,
     };
+    console.log("[saveTransaction] A inserir:", novoPedido);
     const inserted = await insertSupabase(novoPedido);
     if (!inserted) return;
     historico.unshift(inserted);
-    alert("Pedido guardado!");
+    cancelEdit();
+    renderAllTables();
+    alert("✅ Pedido guardado!");
   }
-
-  cancelEdit();
-  renderAllTables();
 }
 
 async function deleteItem(idPedido) {
