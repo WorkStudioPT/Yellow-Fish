@@ -6,7 +6,13 @@ const SUPABASE_URL = "https://ymvbiprvqulecawiuscj.supabase.co";
 const SUPABASE_KEY = "sb_publishable_tU1FQVAf25yXDS2jZ8tA2Q_vSmEqbvW";
 
 const { createClient } = supabase; 
-const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+const db = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  }
+});
 
 // ── Estado global ─────────────────────────────────────────
 let historico = [];
@@ -78,27 +84,33 @@ async function mostrarEcra(session) {
   }
 }
 
-// Garante que a sessão está válida antes de qualquer operação na BD.
-// Força sempre uma renovação para evitar falhas após longos períodos de inatividade.
-async function ensureSession() {
-  try {
-    // Tenta renovar o token proativamente (funciona mesmo com token ainda válido)
-    const { data: refreshed, error: refreshErr } = await db.auth.refreshSession();
-    if (!refreshErr && refreshed?.session?.user) {
-      currentUser = refreshed.session.user;
-      return true;
-    }
-  } catch (_) { /* ignora erros de rede aqui e tenta getSession */ }
+// Devolve sempre o user atual diretamente da sessão Supabase.
+// Nunca depende da variável global currentUser para operações na BD.
+async function getSessionUser() {
+  // Tenta obter sessão em memória
+  const { data: { session } } = await db.auth.getSession();
+  if (session?.user) return session.user;
 
-  // Fallback: verifica a sessão atual em memória
-  const { data: { session }, error } = await db.auth.getSession();
-  if (!error && session?.user) {
-    currentUser = session.user;
-    return true;
+  // Se não há sessão, tenta renovar (refresh_token está em localStorage)
+  console.warn("[getSessionUser] Sem sessão, a tentar renovar...");
+  const { data: renovada, error } = await db.auth.refreshSession();
+  if (!error && renovada?.session?.user) {
+    console.log("[getSessionUser] Sessão renovada OK.");
+    return renovada.session.user;
   }
 
-  alert("⚠️ A sessão expirou. Por favor, faz login novamente.");
-  await mostrarEcra(null);
+  console.error("[getSessionUser] Não foi possível obter sessão:", error?.message);
+  return null;
+}
+
+// Mantido por compatibilidade — usa getSessionUser internamente
+async function ensureSession() {
+  const user = await getSessionUser();
+  if (user) { currentUser = user; return true; }
+  const confirmar = confirm(
+    "A ligação à base de dados perdeu-se.\n\nClica OK para recarregar a página (os dados não se perdem)."
+  );
+  if (confirmar) window.location.reload();
   return false;
 }
 
@@ -117,8 +129,17 @@ async function initAuth() {
     console.log("[Auth event]", event, session?.user?.email ?? "sem sessão");
     
     if (event === "SIGNED_IN") {
-      // Primeiro login: carrega dados e mostra app
-      await mostrarEcra(session);
+      // Só inicializa a app se ainda não estiver visível (primeiro login).
+      // Se a app já estiver aberta, o SIGNED_IN é disparado pelo Supabase
+      // quando renova o token ao voltar à aba — NÃO devemos recarregar tudo.
+      const appVisivel = document.getElementById("app-screen").style.display !== "none";
+      if (!appVisivel) {
+        await mostrarEcra(session);
+      } else {
+        // App já está aberta — apenas atualiza o user
+        if (session?.user) currentUser = session.user;
+        console.log("[Auth event] SIGNED_IN ignorado — app já estava aberta.");
+      }
     } else if (event === "TOKEN_REFRESHED") {
       // Apenas atualiza o utilizador atual — NÃO recarrega dados
       if (session?.user) currentUser = session.user;
@@ -127,13 +148,40 @@ async function initAuth() {
     }
   });
 
-  // 3. Keepalive: renova a sessão proativamente a cada 20 minutos
-  //    (os tokens expiram ao fim de 1 hora — 20 min garante que nunca expira silenciosamente)
+  // 3. Keepalive: renova a sessão proativamente a cada 10 minutos
+  //    (tokens expiram em 1 hora — 10 min garante margem ampla)
   setInterval(async () => {
     console.log("[Keepalive] A renovar sessão...");
     const { data, error } = await db.auth.refreshSession();
-    if (!error && data?.session?.user) currentUser = data.session.user;
-  }, 20 * 60 * 1000);
+    if (!error && data?.session?.user) {
+      currentUser = data.session.user;
+      console.log("[Keepalive] Sessão renovada OK:", currentUser.email);
+    } else if (error) {
+      console.warn("[Keepalive] Falha ao renovar sessão:", error.message);
+    }
+  }, 10 * 60 * 1000);
+
+  // 4. Listener de visibilidade: renova sessão quando o utilizador volta à aba
+  //    (se o portátil ficou em standby, o keepalive não correu — isto resolve)
+  document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState === "visible" && currentUser) {
+      console.log("[Visibilidade] Aba voltou ao foco — a verificar sessão...");
+      const { data: { session } } = await db.auth.getSession();
+      if (session?.user) {
+        currentUser = session.user;
+        console.log("[Visibilidade] Sessão OK.");
+      } else {
+        // Tenta renovar antes de pedir reload
+        const { data: renovada } = await db.auth.refreshSession();
+        if (renovada?.session?.user) {
+          currentUser = renovada.session.user;
+          console.log("[Visibilidade] Sessão renovada OK.");
+        } else {
+          console.warn("[Visibilidade] Sessão perdida após inatividade.");
+        }
+      }
+    }
+  });
 }
 
 // ══════════════════════════════════════════════════════════
@@ -157,11 +205,17 @@ async function loadFromSupabase() {
 }
 
 async function insertSupabase(pedido) {
-  if (!await ensureSession()) return null;
+  const user = await getSessionUser();
+  if (!user) {
+    const ok = confirm("Sessão perdida. Clica OK para recarregar (dados não se perdem).");
+    if (ok) window.location.reload();
+    return null;
+  }
+  currentUser = user;
   const { data, error } = await db
     .from("transacoes")
     .insert([{
-      user_id:  currentUser.id,
+      user_id:  user.id,
       data:     pedido.data,
       entidade: pedido.entidade,
       tipo:     pedido.tipo,
@@ -176,24 +230,36 @@ async function insertSupabase(pedido) {
 }
 
 async function updateSupabase(id, campos) {
-  if (!await ensureSession()) return false;
+  const user = await getSessionUser();
+  if (!user) {
+    const ok = confirm("Sessão perdida. Clica OK para recarregar (dados não se perdem).");
+    if (ok) window.location.reload();
+    return false;
+  }
+  currentUser = user;
   const { error } = await db
     .from("transacoes")
     .update(campos)
     .eq("id", id)
-    .eq("user_id", currentUser.id);
+    .eq("user_id", user.id);
 
   if (error) { alert("Erro ao atualizar: " + error.message); return false; }
   return true;
 }
 
 async function deleteSupabase(id) {
-  if (!await ensureSession()) return false;
+  const user = await getSessionUser();
+  if (!user) {
+    const ok = confirm("Sessão perdida. Clica OK para recarregar (dados não se perdem).");
+    if (ok) window.location.reload();
+    return false;
+  }
+  currentUser = user;
   const { error } = await db
     .from("transacoes")
     .delete()
     .eq("id", id)
-    .eq("user_id", currentUser.id);
+    .eq("user_id", user.id);
 
   if (error) { alert("Erro ao apagar: " + error.message); return false; }
   return true;
