@@ -79,22 +79,27 @@ async function mostrarEcra(session) {
 }
 
 // Garante que a sessão está válida antes de qualquer operação na BD.
-// Se o token expirou, tenta renová-lo. Devolve true se OK, false se falhou.
+// Força sempre uma renovação para evitar falhas após longos períodos de inatividade.
 async function ensureSession() {
-  const { data: { session }, error } = await db.auth.getSession();
-  if (error || !session) {
-    // Tenta renovar
+  try {
+    // Tenta renovar o token proativamente (funciona mesmo com token ainda válido)
     const { data: refreshed, error: refreshErr } = await db.auth.refreshSession();
-    if (refreshErr || !refreshed?.session) {
-      alert("⚠️ A sessão expirou. Por favor, faz login novamente.");
-      await mostrarEcra(null);
-      return false;
+    if (!refreshErr && refreshed?.session?.user) {
+      currentUser = refreshed.session.user;
+      return true;
     }
-    currentUser = refreshed.session.user;
-  } else {
+  } catch (_) { /* ignora erros de rede aqui e tenta getSession */ }
+
+  // Fallback: verifica a sessão atual em memória
+  const { data: { session }, error } = await db.auth.getSession();
+  if (!error && session?.user) {
     currentUser = session.user;
+    return true;
   }
-  return true;
+
+  alert("⚠️ A sessão expirou. Por favor, faz login novamente.");
+  await mostrarEcra(null);
+  return false;
 }
 
 async function initAuth() {
@@ -122,12 +127,13 @@ async function initAuth() {
     }
   });
 
-  // 3. Keepalive: renova a sessão proativamente a cada 45 minutos
-  //    (os tokens expiram ao fim de 1 hora — isto evita desconexões silenciosas)
+  // 3. Keepalive: renova a sessão proativamente a cada 20 minutos
+  //    (os tokens expiram ao fim de 1 hora — 20 min garante que nunca expira silenciosamente)
   setInterval(async () => {
     console.log("[Keepalive] A renovar sessão...");
-    await db.auth.refreshSession();
-  }, 45 * 60 * 1000);
+    const { data, error } = await db.auth.refreshSession();
+    if (!error && data?.session?.user) currentUser = data.session.user;
+  }, 20 * 60 * 1000);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -347,6 +353,12 @@ function addItem(containerId, category, nomeSelecionado = null, qty = 1, precoCu
       return `<option value="${flatVal}" data-min="${typeof val === 'object' ? val.min : flatVal}" data-max="${typeof val === 'object' ? val.max : flatVal}" ${selected}>${label}</option>`;
     }).join("");
 
+  // If nomeSelecionado is set but not in this category, add it as a custom option so the edit is visible
+  const nomeNaCategoria = nomeSelecionado ? Object.keys(precos[category]).find(k => k === nomeSelecionado) : null;
+  const extraOption = (nomeSelecionado && !nomeNaCategoria)
+    ? `<option value="${precoCustom !== null ? precoCustom : 0}" data-min="0" data-max="999999999" selected>${nomeSelecionado} (custom)</option>`
+    : "";
+
   // First product to determine range for price input
   const firstVal = Object.values(precos[category])[0];
   const firstIsRange = typeof firstVal === 'object' && firstVal !== null;
@@ -363,7 +375,7 @@ function addItem(containerId, category, nomeSelecionado = null, qty = 1, precoCu
 
   div.innerHTML = `
     <div class="col item-select-col"><select class="prod-select" onchange="onSelectChange(this); updateCalculations()">
-      ${options}
+      ${extraOption}${options}
     </select></div>
     ${priceInputHtml}
     <div class="col item-qty-col"><input type="number" class="prod-qty" value="${qty}" min="1" oninput="updateCalculations()"></div>
@@ -563,9 +575,15 @@ function editItem(idPedido) {
     document.getElementById("cliente-nome").value = pedido.entidade;
     const cat = clienteMode === "Compra" ? "cliente_compra" : "cliente_venda_peixe";
     const { compraItems, vendaItems } = parseDetalhes(pedido.detalhes, pedido.tipo);
-    compraItems.forEach(({ nome, qty, preco }) => addItem("compra-items", cat, encontrarNomeNaCategoria(nome, cat), qty, preco));
+    compraItems.forEach(({ nome, qty, preco }) => {
+      const nomeResolvido = encontrarNomeNaCategoria(nome, cat) || encontrarNomeEmTodasCategorias(nome);
+      addItem("compra-items", cat, nomeResolvido, qty, preco);
+    });
     if (pedido.tipo === "Cliente-Compra") {
-      vendaItems.forEach(({ nome, qty, preco }) => addItem("venda-items", "cliente_venda", encontrarNomeNaCategoria(nome, "cliente_venda"), qty, preco));
+      vendaItems.forEach(({ nome, qty, preco }) => {
+        const nomeResolvido = encontrarNomeNaCategoria(nome, "cliente_venda") || encontrarNomeEmTodasCategorias(nome);
+        addItem("venda-items", "cliente_venda", nomeResolvido, qty, preco);
+      });
     }
     if (compraItems.length === 0) addClienteItem();
   } else {
@@ -579,7 +597,11 @@ function editItem(idPedido) {
     document.getElementById("patrao-obs").value = pedido.entidade;
     const cat = patraoMode === "Compra" ? "patrao_compra" : "patrao_venda";
     const { compraItems } = parseDetalhes(pedido.detalhes, pedido.tipo);
-    compraItems.forEach(({ nome, qty, preco }) => addItem("patrao-items", cat, encontrarNomeNaCategoria(nome, cat) || encontrarNomeNaCategoria(nome, "patrao"), qty, preco));
+    compraItems.forEach(({ nome, qty, preco }) => {
+      // Try the expected category first, then fall back to searching all categories
+      const nomeResolvido = encontrarNomeNaCategoria(nome, cat) || encontrarNomeEmTodasCategorias(nome);
+      addItem("patrao-items", cat, nomeResolvido, qty, preco);
+    });
     if (compraItems.length === 0) addPatraoItem();
   }
 
@@ -661,9 +683,30 @@ function parseDetalhes(detalhes, tipo) {
 }
 
 function encontrarNomeNaCategoria(nomeGuardado, categoria) {
+  // Guard: if category doesn't exist in precos, return null
+  if (!precos[categoria]) return null;
+  // 1. Correspondência exata
   if (precos[categoria][nomeGuardado] !== undefined) return nomeGuardado;
   const chaves = Object.keys(precos[categoria]);
-  return chaves.find(k => k.toLowerCase() === nomeGuardado.toLowerCase()) || null;
+  // 2. Correspondência case-insensitive
+  const exactCI = chaves.find(k => k.toLowerCase() === nomeGuardado.toLowerCase());
+  if (exactCI) return exactCI;
+  // 3. Correspondência parcial: a chave começa com o nome guardado (ex: "Plastico/Sucata" -> "Plastico/Sucata (Un)")
+  const partial = chaves.find(k => k.toLowerCase().startsWith(nomeGuardado.toLowerCase()));
+  if (partial) return partial;
+  // 4. Correspondência invertida: o nome guardado começa com a chave
+  const partial2 = chaves.find(k => nomeGuardado.toLowerCase().startsWith(k.toLowerCase()));
+  if (partial2) return partial2;
+  return null;
+}
+
+// Searches all categories for a name match — fallback for items that moved categories
+function encontrarNomeEmTodasCategorias(nomeGuardado) {
+  for (const cat of Object.keys(precos)) {
+    const found = encontrarNomeNaCategoria(nomeGuardado, cat);
+    if (found) return found;
+  }
+  return nomeGuardado; // return as-is so the select shows the raw name instead of crashing
 }
 
 // ══════════════════════════════════════════════════════════
