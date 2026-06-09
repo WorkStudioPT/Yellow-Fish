@@ -430,7 +430,7 @@ function addItem(containerId, category, nomeSelecionado = null, qty = 1, precoCu
   const firstIsRange = typeof firstVal === 'object' && firstVal !== null;
   const initMin = firstIsRange ? firstVal.min : (firstVal || 0);
   const initMax = firstIsRange ? firstVal.max : (firstVal || 0);
-  const initPrice = precoCustom !== null ? precoCustom : initMin;
+  const initPrice = precoCustom !== null ? precoCustom : initMax;
 
   const priceInputHtml = isRange
     ? `<div class="col price-range-col">
@@ -469,7 +469,7 @@ function onSelectChange(sel) {
     priceInput.max = max;
     priceInput.title = `${min}$–${max}$`;
     const cur = parseFloat(priceInput.value) || 0;
-    if (cur < min || cur > max) priceInput.value = min;
+    if (cur < min || cur > max) priceInput.value = max;
   }
   if (rangeLabel) {
     rangeLabel.textContent = ``;
